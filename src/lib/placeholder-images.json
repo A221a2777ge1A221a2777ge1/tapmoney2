@@ -1,0 +1,34 @@
+{
+  "placeholderImages": [
+    {
+      "id": "investment-agriculture",
+      "description": "A vibrant green farm field under a clear blue sky, representing agricultural investments.",
+      "imageUrl": "https://picsum.photos/seed/agri/600/400",
+      "imageHint": "agriculture farm"
+    },
+    {
+      "id": "investment-tech",
+      "description": "A futuristic circuit board with glowing lines, symbolizing technology and innovation.",
+      "imageUrl": "https://picsum.photos/seed/tech/600/400",
+      "imageHint": "technology circuit"
+    },
+    {
+      "id": "investment-real-estate",
+      "description": "A modern architectural building with clean lines and large glass windows, for real estate opportunities.",
+      "imageUrl": "https://picsum.photos/seed/building/600/400",
+      "imageHint": "modern architecture"
+    },
+    {
+      "id": "investment-finance",
+      "description": "Abstract representation of financial stock market charts and graphs on a digital screen.",
+      "imageUrl": "https://picsum.photos/seed/finance/600/400",
+      "imageHint": "finance chart"
+    },
+    {
+      "id": "investment-general",
+      "description": "A diverse group of people collaborating in a modern office, representing general business investments.",
+      "imageUrl": "https://picsum.photos/seed/general/600/400",
+      "imageHint": "business collaboration"
+    }
+  ]
+}
