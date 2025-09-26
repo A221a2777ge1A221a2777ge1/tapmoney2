@@ -56,23 +56,52 @@ export default function TapButton({ initialTaps }: { initialTaps: number }) {
     }, 500); // debounce window
   };
 
-  // Flush on unmount or when window is unloading
+  // Flush on unmount, unload, or when the page goes to background (visibility change)
   useEffect(() => {
-    const beforeUnload = () => {
+    const flushNow = () => {
       if (flushTimerRef.current) {
         clearTimeout(flushTimerRef.current);
         flushTimerRef.current = null;
       }
+      const count = pendingRef.current;
+      if (count <= 0) return;
+      pendingRef.current = 0;
+      // Fire and forget; don't block unload
+      (async () => {
+        if (!wallet || !wallet.account) {
+          setLocalTaps((t) => Math.max(0, t - count));
+          return;
+        }
+        try {
+          const userId = wallet.account.address;
+          await fetch('/api/flows/user-taps', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId, taps: count }),
+            keepalive: true,
+          });
+        } catch {
+          setLocalTaps((t) => Math.max(0, t - count));
+        }
+      })();
     };
+
+    const beforeUnload = () => flushNow();
+    const visibilityHandler = () => {
+      if (document.hidden) flushNow();
+    };
+
     window.addEventListener('beforeunload', beforeUnload);
+    document.addEventListener('visibilitychange', visibilityHandler);
     return () => {
       window.removeEventListener('beforeunload', beforeUnload);
+      document.removeEventListener('visibilitychange', visibilityHandler);
       if (flushTimerRef.current) {
         clearTimeout(flushTimerRef.current);
         flushTimerRef.current = null;
       }
     };
-  }, []);
+  }, [wallet]);
 
   const handleTap = (event: MouseEvent<HTMLButtonElement>) => {
     // Animation handling

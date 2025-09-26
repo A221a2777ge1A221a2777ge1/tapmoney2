@@ -27,7 +27,7 @@ export default function InvestmentsPage() {
     async function loadInvestments() {
       try {
         setLoading(true);
-        const res = await fetch('/api/flows/investments', { cache: 'no-store' });
+        const res = await fetch('/api/flows/investments');
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         setInvestments(data.investments as Investment[]);
