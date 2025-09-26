@@ -17,10 +17,23 @@ export const aggregateOnce = functions.https.onRequest(async (req, res) => {
         const data = d.data();
         if (typeof data?.count === 'number') total += data.count;
       });
-      await db.collection('leaderboard').doc(userId).set({ total }, { merge: true });
+      await db.collection('leaderboard').doc(userId).set({ total, updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
       count++;
     }
-    res.json({ ok: true, updated: count });
+
+    // Compute top 300 by total
+    const lbSnap = await db.collection('leaderboard').get();
+    const entries: Array<{ userId: string; total: number }> = [];
+    lbSnap.forEach((doc) => {
+      const data = doc.data();
+      const total = typeof data?.total === 'number' ? data.total : 0;
+      entries.push({ userId: doc.id, total });
+    });
+    entries.sort((a, b) => b.total - a.total);
+    const top = entries.slice(0, 300);
+    await db.collection('leaderboardTop').doc('current').set({ updatedAt: admin.firestore.FieldValue.serverTimestamp(), top }, { merge: true });
+
+    res.json({ ok: true, updated: count, topCount: top.length });
   } catch (e: any) {
     res.status(500).json({ error: e?.message || 'aggregation failed' });
   }
@@ -37,6 +50,16 @@ export const aggregateScheduled = functions.pubsub.schedule('every 5 minutes').o
       const data = d.data();
       if (typeof data?.count === 'number') total += data.count;
     });
-    await db.collection('leaderboard').doc(userId).set({ total }, { merge: true });
+    await db.collection('leaderboard').doc(userId).set({ total, updatedAt: admin.firestore.FieldValue.serverTimestamp() }, { merge: true });
   }
+  const lbSnap = await db.collection('leaderboard').get();
+  const entries: Array<{ userId: string; total: number }> = [];
+  lbSnap.forEach((doc) => {
+    const data = doc.data();
+    const total = typeof data?.total === 'number' ? data.total : 0;
+    entries.push({ userId: doc.id, total });
+  });
+  entries.sort((a, b) => b.total - a.total);
+  const top = entries.slice(0, 300);
+  await db.collection('leaderboardTop').doc('current').set({ updatedAt: admin.firestore.FieldValue.serverTimestamp(), top }, { merge: true });
 });

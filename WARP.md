@@ -86,6 +86,15 @@ CLI (bypass UI)
   - Executes payouts using the TON client scaffold (requires TONWEB_ENABLED=1 and wallet keys in env).
 
 Firestore sharded counters (taps)
+- Rules: see firestore.rules — users can only write their own shard docs, with monotonic increments capped per write.
+- Client writes: taps are batched locally and written to Firestore shards for each user: users/{userId}/tapShards/{shardIndex}. See src/lib/firestore.ts (addTapsToShard).
+- Anchor docs: users/{userId} is created to allow listing users in the aggregator.
+- Aggregation: functions/src/index.ts includes stub functions to sum shards into leaderboard/{userId}, and compute top 300 into leaderboardTop/current.
+- API: GET /api/leaderboard returns the cached top leaderboard snapshot with cache headers.
+- Deploy (example):
+  - cd functions && npm i && npm run build && npm run deploy
+  - firebase deploy --only firestore:rules
+  - Requires Firebase project setup and permissions.
 - Client writes: taps are batched locally and written to Firestore shards for each user: users/{userId}/tapShards/{shardIndex}. See src/lib/firestore.ts (addTapsToShard).
 - Anchor docs: users/{userId} is created to allow listing users in the aggregator.
 - Aggregation: functions/src/index.ts includes stub functions to sum shards into leaderboard/{userId}. Use the HTTP function aggregateOnce for manual runs, or aggregateScheduled for cron.

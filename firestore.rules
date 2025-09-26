@@ -1,0 +1,36 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Users: anchor doc
+    match /users/{userId} {
+      allow read: if true; // public read of basic existence; tighten if needed
+      allow create, update: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Sharded counters: users/{userId}/tapShards/{shardId}
+    match /users/{userId}/tapShards/{shardId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow create: if request.auth != null && request.auth.uid == userId &&
+        request.resource.data.keys().hasOnly(['count']) &&
+        request.resource.data.count == 0; // initialize shard
+
+      allow update: if request.auth != null && request.auth.uid == userId &&
+        request.resource.data.keys().hasOnly(['count']) &&
+        // Ensure monotonic increment and cap per-write delta to 100
+        request.resource.data.count >= resource.data.count &&
+        request.resource.data.count <= resource.data.count + 100;
+    }
+
+    // Leaderboard: readable by anyone; only server (admin) should write via functions
+    match /leaderboard/{doc} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /leaderboardTop/{doc} {
+      allow read: if true;
+      allow write: if false;
+    }
+  }
+}
