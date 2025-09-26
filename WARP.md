@@ -65,3 +65,8 @@ Conventions and useful details
 From README.md
 - “This is a NextJS starter in Firebase Studio.”
 - “To get started, take a look at src/app/page.tsx.”
+
+Firebase Studio preview
+- Install command: npm ci
+- Start command: npm run dev:studio
+- Notes: dev:studio runs Next (port 9002) and Genkit watch mode concurrently so Studio can discover flows. Ensure Node >= 18.18 (Node 20 recommended).
