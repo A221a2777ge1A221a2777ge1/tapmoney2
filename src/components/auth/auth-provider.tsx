@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { getAuth, signInWithCustomToken } from 'firebase/auth';
 import { app } from '@/lib/firebase';
-import { getAuthToken } from '@/ai/flows/auth-flow';
 
 const manifestUrl = 'https://ton-connect.github.io/demo-dapp-with-react-ui/tonconnect-manifest.json';
 
@@ -16,41 +15,46 @@ function AuthHandler({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const auth = getAuth(app);
-    
-    // This effect handles the Firebase sign-in logic when the wallet connects.
+
+    // Attempt Firebase sign-in when a wallet connects (best effort, non-blocking)
     const handleWalletChange = async () => {
       if (wallet && wallet.account && authStatus === 'signedOut') {
         try {
-          // Prevent re-running sign-in attempts if one is already in progress
           setAuthStatus('pending');
-          const customToken = await getAuthToken({ address: wallet.account.address });
-          await signInWithCustomToken(auth, customToken);
-          // onAuthStateChanged will handle the redirect
+          const res = await fetch('/api/flows/auth-token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ address: wallet.account.address }),
+          });
+          if (res.ok) {
+            const { token } = await res.json();
+            await signInWithCustomToken(auth, token);
+          } else {
+            // Proceed without Firebase user in demo mode
+            setAuthStatus('signedIn');
+          }
         } catch (error) {
-          console.error('Firebase sign-in error:', error);
-          setAuthStatus('signedOut'); // Reset status on error
-          // Handle error, e.g., show a toast message to the user
+          console.error('Firebase sign-in error (continuing in demo mode):', error);
+          setAuthStatus('signedIn');
         }
       }
     };
     handleWalletChange();
-
   }, [wallet, authStatus]);
 
 
   useEffect(() => {
     const auth = getAuth(app);
 
-    // This effect only handles auth state changes and routing.
+    // Handle auth state changes and routing. Wallet presence is sufficient for demo mode.
     const unsubscribe = auth.onAuthStateChanged(user => {
-      if (user) {
+      const hasWallet = !!wallet && !!wallet.account;
+      if (user || hasWallet) {
         setAuthStatus('signedIn');
         router.replace('/dashboard');
       } else {
         setAuthStatus('signedOut');
-        if (!wallet || !wallet.account) {
-            router.replace('/login');
-        }
+        router.replace('/login');
       }
     });
 

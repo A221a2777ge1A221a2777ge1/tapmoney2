@@ -4,7 +4,6 @@ import InvestmentCard from '@/components/investments/investment-card';
 import InvestmentFilters from '@/components/investments/investment-filters';
 import { Separator } from '@/components/ui/separator';
 import { useEffect, useState } from 'react';
-import { listInvestments } from '@/ai/flows/investment-flow';
 import type { Investment } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -28,10 +27,12 @@ export default function InvestmentsPage() {
     async function loadInvestments() {
       try {
         setLoading(true);
-        const response = await listInvestments({});
-        setInvestments(response.investments);
+        const res = await fetch('/api/flows/investments', { cache: 'no-store' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        setInvestments(data.investments as Investment[]);
       } catch (error) {
-        console.error("Failed to load investments:", error);
+        console.error('Failed to load investments:', error);
         // Handle error, e.g., show a toast
       } finally {
         setLoading(false);

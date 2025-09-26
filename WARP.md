@@ -8,6 +8,10 @@ Project overview
 - AI flows: Google Genkit is configured with Google AI (Gemini) and exposes server-defined flows consumed by the app.
 - Notable configs: next.config.ts enables standalone output and ignores type/lint errors during build; Tailwind is configured with tailwindcss-animate; path alias @/* -> src/*.
 
+Environment
+- Node: .nvmrc and .node-version pin Node 20 (package.json engines >= 18.18). Use a Node 20 runtime for consistent behavior.
+- Firebase Studio preview: Uses npm ci and a combined dev process (see dev:studio below).
+
 Common commands
 - Install dependencies (Windows PowerShell):
   - npm install
@@ -24,6 +28,9 @@ Common commands
 - Genkit development runner (for AI flows):
   - npm run genkit:dev
   - npm run genkit:watch
+  - If these fail with "tsx: command not found", install it locally: npm i -D tsx
+- Firebase Studio (Next + Genkit together for flow discovery):
+  - npm run dev:studio
 - Tests:
   - No test script or framework is configured in package.json.
 
@@ -42,7 +49,7 @@ High-level architecture and flow
     - auth-flow.ts: getAuthToken(input: { address: string }) => string (mock JWT)
     - investment-flow.ts: listInvestments({}) => { investments: Investment[] } using mock data
     - user-flow.ts: updateUserTaps({ userId, taps }) => { newTotal } (mock calculation)
-  - The dev harness src/ai/dev.ts loads dotenv; run the Genkit dev process with npm run genkit:dev or npm run genkit:watch.
+  - The dev harness src/ai/dev.ts loads .env via dotenv; ensure required provider environment variables are set for Google AI when running the dev process.
 
 - Data and types
   - src/lib/types.ts defines User, Investment, and PortfolioPosition types.
@@ -55,18 +62,25 @@ High-level architecture and flow
   - Tailwind is configured in tailwind.config.ts and used across app and components; animations use tailwindcss-animate. Inter font is loaded in the root layout. Many UI primitives live under src/components/ui and are composed by feature-level components.
 
 - Next.js configuration
-  - next.config.ts sets output: 'standalone', ignores type/lint errors during build, and whitelists remote image hosts (placehold.co, images.unsplash.com, picsum.photos).
+  - Root next.config.ts sets output: 'standalone', ignores type/lint errors during build, and whitelists remote image hosts (placehold.co, images.unsplash.com, picsum.photos).
 
 Conventions and useful details
 - TypeScript paths: @/* maps to src/* (see tsconfig.json). Import app modules using '@/...'.
 - Images: Remote patterns are configured; use Next/Image with those hosts without additional config.
 - Dev server port: The app runs on http://localhost:9002 during development (see npm run dev).
+- shadcn/ui config: components.json defines alias mappings (components, ui, lib, hooks) and Tailwind integration.
+
+Configuration notes and fixes
+- Duplicate Next config: next.config.ts exists in both the repo root and src/. Next only reads the root config; remove src/next.config.ts to avoid confusion.
+- Genkit runner uses tsx: The scripts invoke tsx; if it's not present locally, add it as a devDependency (npm i -D tsx).
 
 From README.md
 - “This is a NextJS starter in Firebase Studio.”
 - “To get started, take a look at src/app/page.tsx.”
 
-Firebase Studio preview
-- Install command: npm ci
-- Start command: npm run dev:studio
-- Notes: dev:studio runs Next (port 9002) and Genkit watch mode concurrently so Studio can discover flows. Ensure Node >= 18.18 (Node 20 recommended).
+Firebase App Hosting / Studio
+- apphosting.yaml sets maxInstances: 1 (scales entry-level by default).
+- Studio preview:
+  - Install: npm ci
+  - Start: npm run dev:studio
+  - Notes: dev:studio runs Next (port 9002) and Genkit watch mode concurrently so Studio can discover flows. Ensure Node >= 18.18 (Node 20 recommended).

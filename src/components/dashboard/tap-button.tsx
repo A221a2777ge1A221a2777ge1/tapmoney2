@@ -3,15 +3,13 @@
 import { useState, useTransition, useRef, type MouseEvent } from 'react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { updateUserTaps } from '@/ai/flows/user-flow';
-import { getAuth } from 'firebase/auth';
-import { app } from '@/lib/firebase';
+import { useTonWallet } from '@tonconnect/ui-react';
 
 export default function TapButton({ initialTaps }: { initialTaps: number }) {
   const [localTaps, setLocalTaps] = useState(0);
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
-  const auth = getAuth(app);
+  const wallet = useTonWallet();
   const buttonRef = useRef<HTMLButtonElement>(null);
 
   const handleTap = (event: MouseEvent<HTMLButtonElement>) => {
@@ -27,24 +25,31 @@ export default function TapButton({ initialTaps }: { initialTaps: number }) {
     setLocalTaps((prev) => prev + 1);
 
     startTransition(async () => {
-      if (!auth.currentUser) {
+      if (!wallet || !wallet.account) {
          toast({
-          variant: "destructive",
-          title: "Not signed in",
-          description: "You must be signed in to save your taps.",
+          variant: 'destructive',
+          title: 'Wallet not connected',
+          description: 'Connect your TON wallet to save taps.',
         })
         return;
       }
       try {
-        await updateUserTaps({ userId: auth.currentUser.uid, taps: 1 });
+        const userId = wallet.account.address;
+        const res = await fetch('/api/flows/user-taps', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId, taps: 1 }),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        await res.json();
       } catch (e) {
          toast({
-          variant: "destructive",
-          title: "Oh no! A slip of the tap.",
+          variant: 'destructive',
+          title: 'Oh no! A slip of the tap.',
           description: "We couldn't save your last tap. Please try again.",
         })
         // Rollback local state on error
-        setLocalTaps(taps => taps -1);
+        setLocalTaps(taps => taps - 1);
       }
     });
   };
