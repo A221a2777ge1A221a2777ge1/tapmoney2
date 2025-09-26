@@ -2,6 +2,9 @@
   "name": "nextn",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=18.18.0"
+  },
   "scripts": {
     "dev": "next dev --turbopack -p 9002",
     "dev:studio": "concurrently -k -n next,genkit \"npm run dev\" \"npm run genkit:watch\"",
