@@ -4,14 +4,14 @@ import { useState, useTransition, useRef, type MouseEvent } from 'react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { updateUserTaps } from '@/ai/flows/user-flow';
-import { useAuth } from 'firebase/auth';
+import { getAuth } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 
 export default function TapButton({ initialTaps }: { initialTaps: number }) {
   const [localTaps, setLocalTaps] = useState(0);
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
-  const auth = useAuth(app);
+  const auth = getAuth(app);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
   const handleTap = (event: MouseEvent<HTMLButtonElement>) => {

@@ -7,7 +7,6 @@
  * - AuthTokenOutput - The return type for the getAuthToken function.
  */
 
-import type {AuthTokenInput, AuthTokenOutput} from './auth-flow';
 import {ai} from '@/ai/genkit';
 import {z} from 'zod';
 
