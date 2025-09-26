@@ -82,15 +82,23 @@ Admin-only payouts (TON)
 - Environment variables:
   - ADMIN_API_TOKEN: secret used to authorize admin-only endpoints via x-admin-api-token header (server-side only; never from client).
   - ADMIN_TON_ADDRESS: on-chain TON address that holds funds to be distributed.
+  - TONWEB_ENABLED: set to 1 to enable actual sends with tonweb; when 0, requests are queued/skipped.
+  - TONCENTER_API_KEY, TON_ENDPOINT: optional provider config for tonweb.
+  - TON_PUBLIC_KEY_HEX, TON_SECRET_KEY_HEX: custodial wallet keys (hex). Never commit real values.
 - Endpoints (server):
   - POST /api/admin/fund { amount }
     - Acknowledges intended funds to ADMIN_TON_ADDRESS (stub; real funding is an on-chain transfer to the admin wallet).
   - POST /api/admin/distribute { totalAmount, topN? }
     - Returns a payout plan that evenly splits totalAmount across top-ranked users (default topN=300; limited by available ranked users). Output includes transfers [{ userId, rank, amount }].
+  - POST /api/admin/execute-payouts { transfers: [{ toAddress, amount, comment? }] }
+    - Executes payouts via the TON client scaffolding (queued/skipped unless TONWEB_ENABLED=1 and wallet keys are set).
   - POST /api/ton/payout { toAddress, amount, comment? }
-    - Stub that queues an individual payout transfer. Replace implementation with a custodial TON transfer using secured server-side keys.
+    - Lower-level single payout endpoint.
+- Admin UI
+  - Page: /admin — lets an admin preview a plan and execute payouts by providing x-admin-api-token at runtime. Token is submitted per-request and not stored.
 - Security:
-  - These endpoints require x-admin-api-token to match ADMIN_API_TOKEN. Do not call them from the client. Run them from secure server tools, jobs, or CI with masked secrets.
+  - These endpoints require x-admin-api-token to match ADMIN_API_TOKEN. Do not call them from the client except the /admin page where the admin manually provides the token.
+  - For production, prefer server-side batch jobs or CLI utilities over a web UI.
 
 Firebase App Hosting / Studio
 - apphosting.yaml sets maxInstances: 1 (scales entry-level by default).
