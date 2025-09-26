@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
+import { Textarea as BaseTextarea } from '@/components/ui/textarea';
 
 export default function AdminPage() {
   const [token, setToken] = useState('');
@@ -15,6 +16,7 @@ export default function AdminPage() {
   const [transfersJson, setTransfersJson] = useState('');
   const [execResult, setExecResult] = useState<any | null>(null);
   const [busy, setBusy] = useState(false);
+  const [mappingsJson, setMappingsJson] = useState('');
 
   const preview = async () => {
     setBusy(true);
@@ -36,6 +38,38 @@ export default function AdminPage() {
     } finally {
       setBusy(false);
     }
+  };
+
+  const importMappings = async () => {
+    setBusy(true);
+    try {
+      let mappings: any;
+      try { mappings = JSON.parse(mappingsJson || '[]'); } catch { throw new Error('Invalid mappings JSON'); }
+      const res = await fetch('/api/admin/users/map-wallets', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-api-token': token,
+        },
+        body: JSON.stringify({ mappings }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error || 'Failed');
+      alert(`Imported ${data.count} mappings`);
+    } catch (e: any) {
+      alert(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const useResolvedTransfers = () => {
+    if (!plan?.transfers) {
+      alert('No resolved transfers in plan');
+      return;
+    }
+    const resolved = plan.transfers.filter((t: any) => t.toAddress);
+    setTransfersJson(JSON.stringify(resolved.map((t: any) => ({ toAddress: t.toAddress, amount: t.amount, comment: `rank ${t.rank}` })), null, 2));
   };
 
   const executePayouts = async () => {
@@ -82,8 +116,29 @@ export default function AdminPage() {
             <Button onClick={preview} disabled={busy}>Preview</Button>
           </div>
           {plan && (
-            <pre className="bg-muted p-3 rounded text-sm overflow-auto max-h-96">{JSON.stringify(plan, null, 2)}</pre>
+            <>
+              <pre className="bg-muted p-3 rounded text-sm overflow-auto max-h-96">{JSON.stringify(plan, null, 2)}</pre>
+              <div className="flex gap-3">
+                <Button variant="secondary" onClick={useResolvedTransfers}>Use resolved transfers</Button>
+              </div>
+            </>
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Import Wallet Mappings</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-muted-foreground">JSON array: [{'{'} userId, address {'}'}]</p>
+          <BaseTextarea rows={8} placeholder='[
+  {"userId":"user-1","address":"EQ..."}
+]' value={mappingsJson} onChange={e => setMappingsJson(e.target.value)} />
+          <div className="flex gap-3">
+            <Input type="password" placeholder="Admin token" value={token} onChange={e => setToken(e.target.value)} />
+            <Button onClick={importMappings} disabled={busy}>Import</Button>
+          </div>
         </CardContent>
       </Card>
 
@@ -93,7 +148,7 @@ export default function AdminPage() {
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-sm text-muted-foreground">Provide an array of transfers: [{'{'} toAddress, amount, comment? {'}'}]</p>
-          <Textarea rows={10} placeholder='[
+          <BaseTextarea rows={10} placeholder='[
   {"toAddress":"EQ...","amount":10,"comment":"weekly"}
 ]' value={transfersJson} onChange={e => setTransfersJson(e.target.value)} />
           <div className="flex gap-3">

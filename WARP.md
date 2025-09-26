@@ -95,9 +95,16 @@ Admin-only payouts (TON)
   - POST /api/ton/payout { toAddress, amount, comment? }
     - Lower-level single payout endpoint.
 - Admin UI
-  - Page: /admin — lets an admin preview a plan and execute payouts by providing x-admin-api-token at runtime. Token is submitted per-request and not stored.
+  - Pages: /admin/login (enter passphrase), /admin (preview plan, import wallet mappings, execute payouts). The UI is gated by a cookie set via /api/admin/session with ADMIN_UI_PASS.
+  - The /admin page still requires x-admin-api-token for each admin API request; the passphrase only gates the UI.
+- Wallet mappings
+  - Storage: file-based at .data/user-wallets.json (userId -> address). Manage via:
+    - POST /api/admin/users/map-wallets { mappings: [{ userId, address }] } (admin-only)
+  - Distribution resolves addresses automatically and returns:
+    - transfers: resolved [{ userId, rank, amount, toAddress }]
+    - unresolved: userIds missing an address
 - Security:
-  - These endpoints require x-admin-api-token to match ADMIN_API_TOKEN. Do not call them from the client except the /admin page where the admin manually provides the token.
+  - ADMIN_UI_PASS gates the UI; ADMIN_API_TOKEN authorizes admin APIs. Do not embed secrets client-side except the short-lived UI passphrase submitted at login.
   - For production, prefer server-side batch jobs or CLI utilities over a web UI.
 
 Firebase App Hosting / Studio

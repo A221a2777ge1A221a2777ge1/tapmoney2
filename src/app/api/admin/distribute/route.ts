@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/admin';
 import { LEADERBOARD_USERS } from '@/lib/data';
+import { getWalletForUser } from '@/lib/store/userWallets';
 
 /**
  * Admin-only distribution plan generator.
@@ -29,7 +30,15 @@ export async function POST(req: NextRequest) {
     const perUserAmount = totalAmount / count;
     const transfers = eligible.map(u => ({ userId: u.id, rank: u.rank!, amount: perUserAmount }));
 
-    return NextResponse.json({ perUserAmount, count, topNUsed: Math.min(topN, ranked.length), transfers });
+    // Resolve addresses from mapping store
+    const resolved = [] as Array<{ userId: string; rank: number; amount: number; toAddress: string }>
+    const unresolved = [] as string[];
+    for (const t of transfers) {
+      const addr = getWalletForUser(t.userId);
+      if (addr) resolved.push({ ...t, toAddress: addr }); else unresolved.push(t.userId);
+    }
+
+    return NextResponse.json({ perUserAmount, count, topNUsed: Math.min(topN, ranked.length), transfers: resolved, unresolved });
   } catch (e: any) {
     if (e?.message === 'UNAUTHORIZED') {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
