@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition, type MouseEvent } from 'rea
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useTonWallet } from '@tonconnect/ui-react';
+import { addTapsToShard } from '@/lib/firestore';
 
 export default function TapButton({ initialTaps }: { initialTaps: number }) {
   const [localTaps, setLocalTaps] = useState(0);
@@ -36,13 +37,7 @@ export default function TapButton({ initialTaps }: { initialTaps: number }) {
         }
         try {
           const userId = wallet.account.address;
-          const res = await fetch('/api/flows/user-taps', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId, taps: count }),
-          });
-          if (!res.ok) throw new Error(`HTTP ${res.status}`);
-          await res.json();
+          await addTapsToShard(userId, count);
         } catch (e) {
           toast({
             variant: 'destructive',
@@ -74,12 +69,8 @@ export default function TapButton({ initialTaps }: { initialTaps: number }) {
         }
         try {
           const userId = wallet.account.address;
-          await fetch('/api/flows/user-taps', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId, taps: count }),
-            keepalive: true,
-          });
+          // Write directly to Firestore shard (client SDK) for low latency and reduced server hops
+          await addTapsToShard(userId, count);
         } catch {
           setLocalTaps((t) => Math.max(0, t - count));
         }

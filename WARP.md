@@ -85,6 +85,14 @@ CLI (bypass UI)
 - Run: TOTAL_AMOUNT={{amount}} TOP_N={{N}} npm run payout:run
   - Executes payouts using the TON client scaffold (requires TONWEB_ENABLED=1 and wallet keys in env).
 
+Firestore sharded counters (taps)
+- Client writes: taps are batched locally and written to Firestore shards for each user: users/{userId}/tapShards/{shardIndex}. See src/lib/firestore.ts (addTapsToShard).
+- Anchor docs: users/{userId} is created to allow listing users in the aggregator.
+- Aggregation: functions/src/index.ts includes stub functions to sum shards into leaderboard/{userId}. Use the HTTP function aggregateOnce for manual runs, or aggregateScheduled for cron.
+- Deploy (example):
+  - cd functions && npm i && npm run build && npm run deploy
+  - Requires Firebase project setup and permissions.
+
 Admin-only payouts (TON)
 - Environment variables:
   - ADMIN_API_TOKEN: secret used to authorize admin-only endpoints via x-admin-api-token header (server-side only; never from client).
