@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition, useRef, type MouseEvent } from 'react';
+import { useEffect, useRef, useState, useTransition, type MouseEvent } from 'react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useTonWallet } from '@tonconnect/ui-react';
@@ -12,46 +12,84 @@ export default function TapButton({ initialTaps }: { initialTaps: number }) {
   const wallet = useTonWallet();
   const buttonRef = useRef<HTMLButtonElement>(null);
 
+  // Batch flush state
+  const pendingRef = useRef(0);
+  const flushTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const scheduleFlush = () => {
+    if (flushTimerRef.current) return; // already scheduled
+    flushTimerRef.current = setTimeout(async () => {
+      flushTimerRef.current = null;
+      const count = pendingRef.current;
+      if (count <= 0) return;
+      pendingRef.current = 0;
+      startTransition(async () => {
+        if (!wallet || !wallet.account) {
+          toast({
+            variant: 'destructive',
+            title: 'Wallet not connected',
+            description: 'Connect your TON wallet to save taps.',
+          });
+          // roll back visual count if we never saved any taps (optional: keep optimistic)
+          setLocalTaps((t) => Math.max(0, t - count));
+          return;
+        }
+        try {
+          const userId = wallet.account.address;
+          const res = await fetch('/api/flows/user-taps', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId, taps: count }),
+          });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          await res.json();
+        } catch (e) {
+          toast({
+            variant: 'destructive',
+            title: 'Oh no! A slip of the tap.',
+            description: "We couldn't save some taps. Please try again.",
+          });
+          // Rollback local state on error
+          setLocalTaps((t) => Math.max(0, t - count));
+        }
+      });
+    }, 500); // debounce window
+  };
+
+  // Flush on unmount or when window is unloading
+  useEffect(() => {
+    const beforeUnload = () => {
+      if (flushTimerRef.current) {
+        clearTimeout(flushTimerRef.current);
+        flushTimerRef.current = null;
+      }
+    };
+    window.addEventListener('beforeunload', beforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', beforeUnload);
+      if (flushTimerRef.current) {
+        clearTimeout(flushTimerRef.current);
+        flushTimerRef.current = null;
+      }
+    };
+  }, []);
+
   const handleTap = (event: MouseEvent<HTMLButtonElement>) => {
     // Animation handling
     const button = buttonRef.current;
     if (button) {
       button.classList.remove('tap-ripple');
       // This is a reflow trick to restart the animation
-      void button.offsetWidth; 
+      void button.offsetWidth;
       button.classList.add('tap-ripple');
     }
 
+    // Optimistically update UI
     setLocalTaps((prev) => prev + 1);
 
-    startTransition(async () => {
-      if (!wallet || !wallet.account) {
-         toast({
-          variant: 'destructive',
-          title: 'Wallet not connected',
-          description: 'Connect your TON wallet to save taps.',
-        })
-        return;
-      }
-      try {
-        const userId = wallet.account.address;
-        const res = await fetch('/api/flows/user-taps', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId, taps: 1 }),
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        await res.json();
-      } catch (e) {
-         toast({
-          variant: 'destructive',
-          title: 'Oh no! A slip of the tap.',
-          description: "We couldn't save your last tap. Please try again.",
-        })
-        // Rollback local state on error
-        setLocalTaps(taps => taps - 1);
-      }
-    });
+    // Queue for batched flush
+    pendingRef.current += 1;
+    scheduleFlush();
   };
 
   const displayTaps = initialTaps + localTaps;

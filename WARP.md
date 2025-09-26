@@ -10,6 +10,7 @@ Project overview
 
 Environment
 - Node: .nvmrc and .node-version pin Node 20 (package.json engines >= 18.18). Use a Node 20 runtime for consistent behavior.
+- Scripts use tsx. If you see a tsx error, install it: npm i -D tsx
 - Firebase Studio preview: Uses npm ci and a combined dev process (see dev:studio below).
 
 Common commands
@@ -77,6 +78,12 @@ Configuration notes and fixes
 From README.md
 - “This is a NextJS starter in Firebase Studio.”
 - “To get started, take a look at src/app/page.tsx.”
+
+CLI (bypass UI)
+- Plan: TOTAL_AMOUNT={{amount}} TOP_N={{N}} npm run payout:plan
+  - Prints a JSON plan with resolved transfers and unresolved users.
+- Run: TOTAL_AMOUNT={{amount}} TOP_N={{N}} npm run payout:run
+  - Executes payouts using the TON client scaffold (requires TONWEB_ENABLED=1 and wallet keys in env).
 
 Admin-only payouts (TON)
 - Environment variables:

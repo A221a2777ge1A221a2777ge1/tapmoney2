@@ -2,7 +2,7 @@
 
 import { TonConnectUIProvider, useTonWallet } from '@tonconnect/ui-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getAuth, signInWithCustomToken } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 
@@ -61,6 +61,33 @@ function AuthHandler({ children }: { children: React.ReactNode }) {
     return () => unsubscribe();
   }, [router, wallet]);
 
+  // Register wallet mapping once per session when signed in and a wallet is present
+  const mappedRef = useRef(false);
+  useEffect(() => {
+    const doRegister = async () => {
+      if (mappedRef.current) return;
+      if (!wallet || !wallet.account) return;
+      try {
+        const auth = getAuth(app);
+        const uid = auth.currentUser?.uid;
+        const userId = uid || wallet.account.address;
+        const address = wallet.account.address;
+        const res = await fetch('/api/users/me/wallet', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId, address }),
+        });
+        if (res.ok) {
+          mappedRef.current = true;
+        }
+      } catch (e) {
+        // best-effort; ignore errors
+      }
+    };
+    if (authStatus === 'signedIn') {
+      void doRegister();
+    }
+  }, [authStatus, wallet]);
 
   // While pending, we can show a loader or nothing to prevent content flicker
   if (authStatus === 'pending') {

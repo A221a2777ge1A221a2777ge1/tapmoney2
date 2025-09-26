@@ -13,7 +13,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+"typecheck": "tsc --noEmit",
+    "payout:plan": "tsx scripts/payout-plan.ts",
+    "payout:run": "tsx scripts/payout-run.ts"
   },
   "dependencies": {
     "@genkit-ai/googleai": "^1.14.1",
