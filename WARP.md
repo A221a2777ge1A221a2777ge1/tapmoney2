@@ -71,12 +71,26 @@ Conventions and useful details
 - shadcn/ui config: components.json defines alias mappings (components, ui, lib, hooks) and Tailwind integration.
 
 Configuration notes and fixes
-- Duplicate Next config: next.config.ts exists in both the repo root and src/. Next only reads the root config; remove src/next.config.ts to avoid confusion.
+- Duplicate Next config: next.config.ts exists in both the repo root and src/. Next only reads the root config; remove src/next.config.ts to avoid confusion. (Removed.)
 - Genkit runner uses tsx: The scripts invoke tsx; if it's not present locally, add it as a devDependency (npm i -D tsx).
 
 From README.md
 - “This is a NextJS starter in Firebase Studio.”
 - “To get started, take a look at src/app/page.tsx.”
+
+Admin-only payouts (TON)
+- Environment variables:
+  - ADMIN_API_TOKEN: secret used to authorize admin-only endpoints via x-admin-api-token header (server-side only; never from client).
+  - ADMIN_TON_ADDRESS: on-chain TON address that holds funds to be distributed.
+- Endpoints (server):
+  - POST /api/admin/fund { amount }
+    - Acknowledges intended funds to ADMIN_TON_ADDRESS (stub; real funding is an on-chain transfer to the admin wallet).
+  - POST /api/admin/distribute { totalAmount, topN? }
+    - Returns a payout plan that evenly splits totalAmount across top-ranked users (default topN=300; limited by available ranked users). Output includes transfers [{ userId, rank, amount }].
+  - POST /api/ton/payout { toAddress, amount, comment? }
+    - Stub that queues an individual payout transfer. Replace implementation with a custodial TON transfer using secured server-side keys.
+- Security:
+  - These endpoints require x-admin-api-token to match ADMIN_API_TOKEN. Do not call them from the client. Run them from secure server tools, jobs, or CI with masked secrets.
 
 Firebase App Hosting / Studio
 - apphosting.yaml sets maxInstances: 1 (scales entry-level by default).
